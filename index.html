@@ -23,6 +23,8 @@ a {
     display: block;
     color: white;
     text-decoration: none;
+    opacity: 0;
+    animation: fadeIn 0.4s forwards;
 }
 
 a:visited {
@@ -33,54 +35,85 @@ a:hover {
     color: rgb(255, 230, 0);
     text-decoration: underline;
 }
+
+#loader {
+    color: white;
+    font-size: 18px;
+    letter-spacing: 2px;
+    animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+    0% { opacity: 0.3; }
+    50% { opacity: 1; }
+    100% { opacity: 0.3; }
+}
+
+@keyframes fadeIn {
+    to { opacity: 1; }
+}
 </style>
 </head>
 
 <body>
 
-<div id="versions">Loading versions...</div>
+<div id="loader" style="display:none;">Checking latest version...</div>
+<div id="versions"></div>
 
 <script>
 const BASE_URL = "https://snow-storm324.github.io/Celectium/";
 const container = document.getElementById("versions");
+const loader = document.getElementById("loader");
+const params = new URLSearchParams(window.location.search);
+const wantsLatest = params.has("latest");
 
-async function versionExists(version) {
+async function versionExists(v) {
     try {
-        const response = await fetch(`${BASE_URL}v${version}/`, { method: "HEAD" });
-        return response.ok;
+        const r = await fetch(`${BASE_URL}v${v}/`, { method: "HEAD" });
+        return r.ok;
     } catch {
         return false;
     }
 }
 
 async function loadVersions() {
-    container.textContent = "";
-    let version = 0;
-    let versions = [];
+    let v = 0;
+    let lastValid = -1;
 
-    while (await versionExists(version)) {
-        versions.push(version);
-        version++;
+    if (wantsLatest) {
+        loader.style.display = "block";
     }
 
-    if (versions.length === 0) {
+    while (true) {
+        const exists = await versionExists(v);
+        if (!exists) break;
+
+        lastValid = v;
+
+        if (!wantsLatest) {
+            const link = document.createElement("a");
+            link.href = `${BASE_URL}v${v}/`;
+            link.textContent = `Celectium v${v}`;
+            container.appendChild(link);
+        }
+
+        v++;
+    }
+
+    if (lastValid >= 0) {
+        if (wantsLatest) {
+            loader.textContent = "Launching latest version...";
+            setTimeout(() => {
+                window.location.replace(`${BASE_URL}v${lastValid}/`);
+            }, 600);
+        } else {
+            const links = container.querySelectorAll("a");
+            if (links.length) {
+                links[links.length - 1].textContent += " (latest version)";
+            }
+        }
+    } else {
         container.textContent = "No versions found.";
-        return;
-    }
-
-    const latest = versions[versions.length - 1];
-
-    const params = new URLSearchParams(window.location.search);
-    if (params.has("latest")) {
-        window.location.replace(`${BASE_URL}v${latest}/`);
-        return;
-    }
-
-    for (const v of versions) {
-        const link = document.createElement("a");
-        link.href = `${BASE_URL}v${v}/`;
-        link.textContent = `Celectium v${v}` + (v === latest ? " (latest version)" : "");
-        container.appendChild(link);
     }
 }
 
