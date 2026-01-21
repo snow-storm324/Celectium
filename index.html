@@ -19,8 +19,9 @@ body {
     font-family: Arial, sans-serif;
 }
 
-a:link {
-    color: rgb(255, 255, 255);
+a {
+    display: block;
+    color: white;
     text-decoration: none;
 }
 
@@ -32,38 +33,58 @@ a:hover {
     color: rgb(255, 230, 0);
     text-decoration: underline;
 }
-
-a:active {
-    color: yellow;
-    text-decoration: underline;
-}
 </style>
-
-<script>
-const LATEST_VERSION = 17;
-const BASE_URL = "https://snow-storm324.github.io/Celectium/";
-
-const params = new URLSearchParams(window.location.search);
-if (params.has("latest")) {
-    window.location.replace(`${BASE_URL}v${LATEST_VERSION}/`);
-}
-</script>
 </head>
 
 <body>
 
-<div id="versions"></div>
+<div id="versions">Loading versions...</div>
 
 <script>
+const BASE_URL = "https://snow-storm324.github.io/Celectium/";
 const container = document.getElementById("versions");
 
-for (let i = 0; i <= LATEST_VERSION; i++) {
-    const link = document.createElement("a");
-    link.href = `${BASE_URL}v${i}/`;
-    link.textContent = `Celectium v${i}` + (i === LATEST_VERSION ? " (latest version)" : "");
-    container.appendChild(link);
-    container.appendChild(document.createElement("br"));
+async function versionExists(version) {
+    try {
+        const response = await fetch(`${BASE_URL}v${version}/`, { method: "HEAD" });
+        return response.ok;
+    } catch {
+        return false;
+    }
 }
+
+async function loadVersions() {
+    container.textContent = "";
+    let version = 0;
+    let versions = [];
+
+    while (await versionExists(version)) {
+        versions.push(version);
+        version++;
+    }
+
+    if (versions.length === 0) {
+        container.textContent = "No versions found.";
+        return;
+    }
+
+    const latest = versions[versions.length - 1];
+
+    const params = new URLSearchParams(window.location.search);
+    if (params.has("latest")) {
+        window.location.replace(`${BASE_URL}v${latest}/`);
+        return;
+    }
+
+    for (const v of versions) {
+        const link = document.createElement("a");
+        link.href = `${BASE_URL}v${v}/`;
+        link.textContent = `Celectium v${v}` + (v === latest ? " (latest version)" : "");
+        container.appendChild(link);
+    }
+}
+
+loadVersions();
 </script>
 
 </body>
